@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SCOTAP - 3D Social World</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body, html { width: 100%; height: 100%; overflow: hidden; background-color: #0d0d0d; color: #fff; }
+
+    /* 1. LOADING SCREEN */
+    #loading-screen {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #0d0d0d; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; z-index: 999;
+    }
+    #logo { width: 140px; height: 140px; border-radius: 50%; margin-bottom: 30px; box-shadow: 0 0 20px rgba(229,9,20,0.4); }
+    .progress-container { width: 70%; max-width: 300px; background: #222; height: 8px; border-radius: 4px; overflow: hidden; }
+    .progress-bar { width: 0%; height: 100%; background: #e50914; transition: width 0.1s ease; }
+    #loading-text { margin-top: 15px; font-size: 14px; color: #aaa; font-weight: bold; }
+
+    /* 2. AUTH & ONBOARDING CONTAINER */
+    #auth-container {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(13,13,13,0.95); z-index: 800; align-items: center; justify-content: center;
+    }
+    .card { background: #1a1a1a; padding: 30px; border-radius: 12px; width: 90%; max-width: 400px; border: 1px solid #333; text-align: center; }
+    .btn { background: #e50914; color: #fff; border: none; padding: 12px 20px; width: 100%; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+    .input-field { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #333; background: #262626; color: #fff; }
+
+    /* 3. GAME CANVAS & UI */
+    #game-canvas { width: 100%; height: 100%; display: block; }
+    #game-ui { display: none; position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 500; width: 90%; max-width: 500px; }
+    #chat-input { width: 100%; padding: 12px; border-radius: 25px; border: none; background: rgba(0,0,0,0.7); color: white; padding-left: 20px; backdrop-filter: blur(5px); }
+  </style>
+
+  <!-- Three.js Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+  <!-- LOADING SCREEN -->
+  <div id="loading-screen">
+    <!-- Replace logo source with your uploaded logo image link -->
+    <img id="logo" src="logo.png" alt="SCOTAP Logo">
+    <div class="progress-container">
+      <div class="progress-bar" id="p-bar"></div>
+    </div>
+    <div id="loading-text">Loading SCOTAP... <span id="p-count">0%</span></div>
+  </div>
+
+  <!-- AUTH / ONBOARDING SCREEN -->
+  <div id="auth-container">
+    <div class="card" id="auth-card">
+      <h2 style="margin-bottom: 20px;">Welcome to SCOTAP</h2>
+      <button class="btn" onclick="triggerGoogleLogin()">Sign in with Google</button>
+      
+      <div id="verification-step" style="display:none; margin-top: 20px;">
+        <p style="font-size: 12px; color: #bbb;">Enter 6-digit code sent to your Gmail:</p>
+        <input type="text" class="input-field" placeholder="123456" maxlength="6">
+        <button class="btn" onclick="verifyOTP()">Verify Account</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME HUD CONTAINER -->
+  <div id="game-ui">
+    <input type="text" id="chat-input" placeholder="Say something in SCOTAP room...">
+  </div>
+
+  <!-- 3D RENDER CANVAS -->
+  <canvas id="game-canvas"></canvas>
+
+  <script>
+    // 1. DYNAMIC LOADING SCREEN LOGIC
+    let progress = 0;
+    const pBar = document.getElementById('p-bar');
+    const pCount = document.getElementById('p-count');
+    const loadingScreen = document.getElementById('loading-screen');
+    const authContainer = document.getElementById('auth-container');
+
+    const loaderInterval = setInterval(() => {
+      progress += Math.floor(Math.random() * 5) + 1;
+      if (progress >= 100) {
+        progress = 100;
+        clearInterval(loaderInterval);
+        setTimeout(() => {
+          loadingScreen.style.display = 'none';
+          authContainer.style.display = 'flex'; // Show Auth after loading
+        }, 500);
+      }
+      pBar.style.width = progress + '%';
+      pCount.innerText = progress + '%';
+    }, 80);
+
+    // 2. AUTH DUMMY FLOW
+    function triggerGoogleLogin() {
+      document.getElementById('verification-step').style.display = 'block';
+    }
+
+    function verifyOTP() {
+      authContainer.style.display = 'none';
+      document.getElementById('game-ui').style.display = 'block';
+      init3DWorld(); // Start 3D Game Engine
+    }
+
+    // 3. THREE.JS 3D ENGINE INITIALIZATION
+    function init3DWorld() {
+      const canvas = document.getElementById('game-canvas');
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x111111);
+
+      const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+      const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+
+      // Add Lighting
+      const light = new THREE.AmbientLight(0xffffff, 0.9);
+      scene.add(light);
+
+      // Floor Grid
+      const grid = new THREE.GridHelper(30, 30, 0xe50914, 0x333333);
+      scene.add(grid);
+
+      // Avatar Placeholder (Red Capsule)
+      const geometry = new THREE.CapsuleGeometry(0.5, 1.5, 4, 8);
+      const material = new THREE.MeshBasicMaterial({ color: 0xe50914 });
+      const avatar = new THREE.Mesh(geometry, material);
+      avatar.position.y = 1.25;
+      scene.add(avatar);
+
+      camera.position.set(0, 3, 6);
+      camera.lookAt(avatar.position);
+
+      function animate() {
+        requestAnimationFrame(animate);
+        renderer.render(scene, camera);
+      }
+      animate();
+    }
+  </script>
+</body>
+</html>
